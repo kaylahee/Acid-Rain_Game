@@ -4,195 +4,208 @@
 #include <string>
 #include <windows.h>
 
-const int DISPLAY_WIDTH = 30;
-const int DISPLAY_HEIGHT = 20;
-const int TYPING_AREA_HEIGHT = 3; // Height of the typing area
+#include "ConsoleUtils.h"
 
-std::vector<std::vector<std::string>> display(DISPLAY_HEIGHT, std::vector<std::string>(DISPLAY_WIDTH, " "));
+ConsoleUtils cu;
+
+const int BOARD_WIDTH = 30;
+const int BOARD_HEIGHT = 20;
+const int TYPING_AREA_HEIGHT = 3;
+
+std::vector<std::vector<std::string>> board(BOARD_HEIGHT, std::vector<std::string>(BOARD_WIDTH, " "));
 std::vector<std::string> words;
 
-int hp = 10; // Initial HP
-int score = 0; // Initial score
+int hp = 10;
+int score = 0;
 
-std::string generateRandomWord() 
+std::vector<char> inputString;
+int cursorX = 15;
+
+std::string generateRandomWord()
 {
     std::string newWord;
-    for (int i = 0; i < 5; i++) 
+    for (int i = 0; i < 5; i++)
     {
         newWord.push_back('a' + rand() % 26);
     }
+    words.push_back(newWord);
     return newWord;
 }
 
-// Function to move the cursor to a specific position on the console
-void gotoxy(int x, int y) 
+void printDisplay()
 {
-    COORD coord;
-    coord.X = x;
-    coord.Y = y;
-    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
-}
-
-void printDisplay() 
-{
-    for (int i = 0; i < DISPLAY_HEIGHT; i++) 
+    for (int i = 0; i < BOARD_HEIGHT; i++)
     {
-        for (int j = 0; j < DISPLAY_WIDTH; j++) 
+        for (int j = 0; j < BOARD_WIDTH; j++)
         {
-            std::cout << display[i][j]; 
+            std::cout << board[i][j];
         }
         std::cout << "\n";
     }
 }
 
-void wordDisplay() {
-    std::vector<char> inputString;
-    int cursorX = 15;
+void check_Word(std::string inputWord)
+{
+    bool isWordin = false;
+    for (int i = 0; i < words.size(); ++i)
+    {
+        if (words[i] == inputWord)
+        {
+            isWordin = true;
+            words.erase(words.begin() + i);
+            score++;
+        }
 
+        if (isWordin == true)
+        {
+            for (int i = 0; i < BOARD_HEIGHT; ++i)
+            {
+                for (int j = 0; j < BOARD_WIDTH - 5; ++j)
+                {
+                    std::string wordFromDisplay = board[i][j] + board[i][j + 1] + board[i][j + 2] + board[i][j + 3] + board[i][j + 4];
+
+                    if (wordFromDisplay == inputWord)
+                    {
+                        for (int k = j; k < j + 5; ++k)
+                        {
+                            board[i][k] = " ";
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+    }
+}
+
+void user_Input()
+{
+    if (_kbhit())
+    {
+        char ch = _getch();
+        cu.gotoxy(cursorX + 1, 25);
+
+        std::string print;
+
+        // Backspace key
+        if (ch == 8 && !inputString.empty())
+        {
+            inputString.pop_back();
+
+            cu.clear_Screen();
+            cu.gotoxy(cursorX + 1, 25);
+
+            for (char element : inputString)
+            {
+                std::cout << element;
+            }
+
+            std::cout << " ";
+        }
+        // Enter key
+        else if (ch == '\r')
+        {
+            std::string inputWord(inputString.begin(), inputString.end());
+            check_Word(inputWord);
+
+            cu.clear_Screen();
+            cu.gotoxy(cursorX + 1, 25);
+
+            inputString.clear();
+            std::cout << "                       ";
+            cursorX = 15;
+        }
+        else
+        {
+            inputString.push_back(ch);
+            for (char element : inputString)
+            {
+                print.push_back(element);
+            }
+            std::cout << print;
+        }
+    }
+}
+
+void wordDisplay()
+{
     int col = 0;
     int tmp_num = 0;
 
     DWORD prevTime = GetTickCount();
 
-    while (true) 
+    while (true)
     {
+        Sleep(100);
+
         DWORD currentTime = GetTickCount();
         DWORD deltaTime = currentTime - prevTime;
 
-        if (deltaTime >= 1000)
+        cu.clear_Screen();
+
+        printDisplay();
+        std::cout << "-----------------------------";
+
+        cu.gotoxy(0, 25);
+        std::cout << "Fill the word:";
+        user_Input();
+
+        if (hp == 10)
         {
-            system("cls");
+            cu.gotoxy(0, 27);
+            std::cout << "HP: " << hp;
+        }
+        else
+        {
+            cu.gotoxy(0, 27);
+            std::cout << "HP: " << hp;
+            std::cout << " ";
+        }
+        cu.gotoxy(0, 28);
+        std::cout << "Score: " << score;
 
-            for (int i = 1; i < DISPLAY_WIDTH - 1; i++)
-            {
-                display[0][i] = " ";
-            }
-
+        if (deltaTime >= 1500)
+        {
             std::string newWord = generateRandomWord();
             words.push_back(newWord);
 
-            int r_num = rand() % (DISPLAY_WIDTH - 5);
+            int r_num = rand() % (BOARD_WIDTH - 5);
             for (int i = 0; i < 5; i++)
             {
-                display[0][r_num + i] = newWord[i];
+                board[0][r_num + i] = newWord[i];
             }
 
-            for (int i = DISPLAY_HEIGHT - 1; i >= 0; i--)
+            for (int i = BOARD_HEIGHT - 1; i >= 0; i--)
             {
-                for (int j = 0; j < DISPLAY_WIDTH; j++)
+                for (int j = 0; j < BOARD_WIDTH; j++)
                 {
                     if (i - 1 >= 0)
                     {
-                        display[i][j] = display[i - 1][j];
+                        board[i][j] = board[i - 1][j];
                     }
                     else
                     {
-                        display[i][j] = " ";
+                        board[i][j] = " ";
                     }
-                }
-            }
-
-            printDisplay();
-            std::cout << "\n\n";
-
-            std::cout << "HP: " << hp << " Score: " << score << "\n";
-
-            for (int i = 0; i < TYPING_AREA_HEIGHT; ++i)
-            {
-                std::cout << std::string(DISPLAY_WIDTH, ' ') << "\n";
-            }
-            std::cout << "\rFill the word: ";
-
-            gotoxy(cursorX, 55);
-
-            std::string print;
-            for (char element : inputString)
-            {
-                print.push_back(element);
-            }
-
-            if (_kbhit())
-            {
-                char ch = _getch();
-                // Backspace key
-                if (ch == 8)
-                {
-                    if (!inputString.empty())
-                    {
-                        inputString.pop_back();
-                        cursorX--;
-                        gotoxy(cursorX, 55);
-                        std::string print(inputString.begin(), inputString.end());
-                        std::cout << print;
-                    }
-                }
-                // Enter key
-                else if (ch == '\r')
-                {
-                    std::string inputWord(inputString.begin(), inputString.end());
-
-                    bool isWordin = false;
-                    for (int i = 0; i < words.size(); ++i)
-                    {
-                        if (words[i] == inputWord)
-                        {
-                            isWordin = true;
-                            words.erase(words.begin() + i);
-                            score++;
-                        }
-
-                        if (isWordin == true)
-                        {
-                            for (int i = 0; i < DISPLAY_HEIGHT; ++i)
-                            {
-                                for (int j = 0; j < DISPLAY_WIDTH - 5; ++j)
-                                {
-                                    std::string wordFromDisplay = display[i][j] + display[i][j + 1] + display[i][j + 2] + display[i][j + 3] + display[i][j + 4];
-
-                                    if (wordFromDisplay == inputWord)
-                                    {
-                                        for (int k = j; k < j + 5; ++k)
-                                        {
-                                            display[i][k] = " ";
-                                        }
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    inputString.clear();
-                    std::string print(inputString.begin(), inputString.end());
-                    system("cls");
-                    std::cout << print;
-                    cursorX = 15;
-                }
-                else
-                {
-                    inputString.push_back(ch);
-                    cursorX++;
-                    std::string print(inputString.begin(), inputString.end());
-                    std::cout << print;
                 }
             }
 
             bool yesInDisplay = false;
-            for (int i = 0; i < DISPLAY_WIDTH; i++)
+            for (int i = 0; i < BOARD_WIDTH; i++)
             {
-                if (display[DISPLAY_HEIGHT - 1][i] != " ")
+                if (board[BOARD_HEIGHT - 1][i] != " ")
                 {
                     yesInDisplay = true;
 
                     std::string prevWord;
-                    for (int j = 0; j < DISPLAY_WIDTH; j++)
+                    for (int j = 0; j < BOARD_WIDTH; j++)
                     {
-                        if (display[DISPLAY_HEIGHT - 1][j] != " ")
+                        if (board[BOARD_HEIGHT - 1][j] != " ")
                         {
-                            prevWord += display[DISPLAY_HEIGHT - 1][j];
+                            prevWord += board[BOARD_HEIGHT - 1][j];
                         }
                     }
-                    
+
                     for (int j = 0; j < words.size(); j++)
                     {
                         if (prevWord == words[j])
@@ -208,6 +221,7 @@ void wordDisplay() {
                 hp--;
                 if (hp <= 0)
                 {
+                    system("cls");
                     std::cout << "Game Over! Your score: " << score << std::endl;
                     break;
                 }
@@ -218,8 +232,10 @@ void wordDisplay() {
     }
 }
 
-int main() 
+int main()
 {
+    cu.CursorView();
+
     srand(time(NULL));
     system("mode con:cols=30 lines=50");
     wordDisplay();
