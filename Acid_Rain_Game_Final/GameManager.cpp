@@ -127,8 +127,17 @@ void GameManager::wordDisplay()
         std::cout << "Fill the word:";
         user_Input();
 
-        cu.gotoxy(0, 27);
-        std::cout << "HP: " << hp;
+        if (hp == 10)
+        {
+            cu.gotoxy(0, 27);
+            std::cout << "HP: " << hp;
+        }
+        else
+        {
+            cu.gotoxy(0, 27);
+            std::cout << "HP: " << hp << " ";
+        }
+
         cu.gotoxy(0, 28);
         std::cout << "Score: " << score;
 
